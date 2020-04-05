@@ -4,7 +4,8 @@
 
  :paths     ["src" "resources" "target/classes"]
 
- :deps      {org.clojure/clojure {:mvn/version "1.10.1"}}
+ :deps      {org.clojure/clojure {:mvn/version "1.10.2-alpha1"}
+             clj-unifier         {:mvn/version "0.0.14"}}
 
  :aliases   {
              :repl     {:extra-deps  {nrepl                {:mvn/version "0.6.0"}

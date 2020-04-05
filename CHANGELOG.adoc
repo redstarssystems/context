@@ -1,5 +1,5 @@
 == Changelog
 
-=== [0.1.0-SNAPSHOT] - 2020-04-05
+=== [0.1.0-alpha] - 2020-04-06
 
-* FIXME: add your changelog here
+* Init alpha release

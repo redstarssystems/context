@@ -1,0 +1,24 @@
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+max_line_length = 120
+trim_trailing_whitespace = true
+
+
+[{*.md, *.adoc}]
+trim_trailing_whitespace = false
+
+
+[*.xml]
+indent_size = 4
+
+
+[Makefile]
+indent_size = 4
+indent_style = tab

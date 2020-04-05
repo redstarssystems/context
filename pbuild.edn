@@ -11,11 +11,11 @@
  :target-folder               "target"
  :group-id                    "org.rssys"
  :artifact-id                 "context"
- :artifact-version            "0.1.0-SNAPSHOT"
+ :artifact-version            "0.1.0-alpha1-SNAPSHOT"
 
- :description                 "FIXME: Put your library description here"
- :url                         "FIXME: https://github.com/add-your-repo"
- :scm                         {:url "FIXME: https://github.com/add-your-repo"}
+ :description                 "Context is a library designed to manage system state."
+ :url                         "https://github.com/redstarssystems/context.git"
+ :scm                         {:url "https://github.com/redstarssystems/context.git"}
  :license                     {:name "EPL-2.0"
                                :url  "https://www.eclipse.org/legal/epl-2.0/"}
  ;;:manifest                    {"Multi-Release" "true"}    ;; here you may override MANIFEST.MF

@@ -1,29 +1,303 @@
-== context
+image:https://img.shields.io/clojars/v/org.rssys/context.svg[clojars,link=https://clojars.org/org.rssys/context]
 
-Project context generated from library template https://github.com/redstarssystems/lib-template.git.
+**Warning!** *It is an alpha release. Everything is subject to change.*
 
-== Building project
+== Intro
 
-Easiest way to build project is to use Makefile (make utility). Run `make help` for additional info.
-To build project using tools.deps run `clojure -A:pbuilder <command>`.
+Context is a library designed to manage system state.
+
+=== Motivation
+
+* System state (or *context*) should be in one place.
+*Context* is like a central database holding the current world.
+Every system component should be able to get any information about the system state from one place in a consistent manner.
+* State management should be as simple as possible, avoiding framework-style constraints for application code.
+Ideally, *context* should be a pure Clojure atom produced from declarative data structure on the fly.
+* State management should be flexible to allow build multi-tenant systems easily.
+*Context* should not be hard linked to a specific namespace.
+Ideally, *context* is a parameter for any system component which performs some business logic.
+* System state should have declarative information structure which allows to read and understand the current state without any means.
+What is the whole system config?
+What parameters were used to start a database?
+What is the current implementation of a cache component?
+Which components are started?
+All of these questions should have the immediate answer from *context*.
+* Dependencies between system components should be resolved accurately.
+
+For a long time I used the https://github.com/tolitius/mount[*mount*] library and it is a very good solution for state management.
+But now, for my projects, I need to see the system state in one place.
+Other Clojure solutions force me to arrange my components in a specific manner (e.g. using defrecords and protocols).
+These framework-style constraints sometimes have limits in building flexible systems cause all parts of an application should follow the same pattern.
+
+== Usage
+
+Add to :deps section of deps.edn the context dependency (see latest version above):
+
+[source,clojure]
+----
+:deps { org.rssys/context {:mvn/version "0.1.0-alpha1"}}
+----
+
+Require necessary namespaces:
+
+[source,clojure]
+----
+(require '[org.rssys.context.core :as ctx])
+(require '[unifier.response :as r])
+----
+
+=== Minimal component
+
+Each stateful object like database connection, cache, etc in a system, is called a component.
+Minimal component is a map with two required parameters: :id (keyword), :config (map or function).
+The minimal component can be registered in a system context but it cannot be started (it is not executable yet).
+
+[source,clojure]
+----
+;; define context with a minimal component
+@(let [system [{:id :web :config {}}]]
+  (ctx/build-context system))
+;; => #:context{:components {:web {:id :web, :config {}, :state-obj nil, :status :stopped, :start-deps []}}}
+----
+
+=== The context
+
+The *context* is a pure Clojure atom contains a map of components `{:id-1 component-state1, ...}`.
+All components are placed under `:context/components` key.
+This key can be overridden using `\*components-path-vec*` variable.
+
+[source,clojure]
+----
+(binding [ctx/*components-path-vec* []]
+  @(let [system [{:id :web :config {}}]]
+     (ctx/build-context system)))
+;; => {:web {:id :web, :config {}, :state-obj nil, :status :stopped, :start-deps []}}
+----
+
+The *context* can be built in a step by step manner:
+
+[source,clojure]
+----
+(def *ctx (atom {}))
+;;=> #'user/*ctx
+
+;; create a minimal component
+(ctx/create! *ctx {:id :web :config {}})
+;;=> #unifier.response.UnifiedSuccess{:type :unifier.response/created, :data :web, :meta nil}
+
+;; create another one
+(ctx/create! *ctx {:id :db :config {:host "localhost" :port 1234}})
+;;=> #unifier.response.UnifiedSuccess{:type :unifier.response/created, :data :db, :meta nil}
+
+@*ctx
+;;=>
+#:context{:components {:web {:id :web, :config {}, :state-obj nil, :status :stopped, :start-deps []},
+                       :db {:id :db,
+                            :config {:host "localhost", :port 1234},
+                            :state-obj nil,
+                            :status :stopped,
+                            :start-deps []}}}
+----
+
+=== Response codes 
+
+*Context* is using https://github.com/just-sultanov/clj-unifier[Unified responses library]. Every successful operation 
+with a context has a type `unifier.response.UnifiedSuccess` and every failure has a type `unifier.response.UnifiedError`.
+
+In this example an attempt to create duplicate component with existing id has failure code:
+
+[source,clojure]
+----
+(ctx/create! *ctx {:id :db :config {:host "localhost" :port 1234}})
+;;=>
+#unifier.response.UnifiedError{:type :unifier.response/conflict,
+                               :data :db,
+                               :meta "component with such id is already exist"}
+----
+
+`r/success?` and `r/error?` functions from `Unified responses library` can be used to detect result of context operation.
+
+=== Start / stop the component
+
+To start the component it has to be executable. The executable component has defined
+start/stop functions. Start function has one argument (config value) which should return stateful object. Stop function 
+has one argument (stateful object) which should close connection, release resources and so on.
+
+[source,clojure]
+----
+(def *ctx (atom {}))
+;; => #'user/*ctx
+
+;; a minimal executable component. Start function has a :config value as argument.
+(ctx/create! *ctx {:id :web :config {} :start-fn (fn [config]) :stop-fn (fn [obj-state])})
+;; => #unifier.response.UnifiedSuccess{:type :unifier.response/created, :data :web, :meta nil}
+
+(ctx/start! *ctx :web)
+;; => #unifier.response.UnifiedSuccess{:type :unifier.response/success, :data :web, :meta nil}
+
+(ctx/stop! *ctx :web)
+;;=> #unifier.response.UnifiedSuccess{:type :unifier.response/success, :data :web, :meta nil}
+----
+
+=== Component dependency management
+
+*Context* library has primitive dependency management. Every component dependency should be declared in `:start-deps` 
+vector using other component id's (e.g :start-deps contains ids of components which should be started before this component). 
+
+Example: If *:web* component depends on *:cache* component, and *:cache* component depends 
+on *:db* component, then it can be declared like this:
+
+[source,clojure]
+----
+(def *ctx (atom {}))
+;; => #'user/*ctx
+
+(ctx/create! *ctx {:id :db :config {} :start-deps [] :start-fn (fn [config]) :stop-fn (fn [obj-state])})
+;; #unifier.response.UnifiedSuccess{:type :unifier.response/created, :data :db, :meta nil}
+
+(ctx/create! *ctx {:id :cache :config {} :start-deps [:db] :start-fn (fn [config]) :stop-fn (fn [obj-state])})
+;; => #unifier.response.UnifiedSuccess{:type :unifier.response/created, :data :cache, :meta nil}
+
+(ctx/create! *ctx {:id :web :config {} :start-deps [:cache] :start-fn (fn [config]) :stop-fn (fn [obj-state])})
+;; => #unifier.response.UnifiedSuccess{:type :unifier.response/created, :data :web, :meta nil}
+
+;; start of :web component cause start of :db an :cache components, respectively
+(ctx/start! *ctx :web)
+;; #unifier.response.UnifiedSuccess{:type :unifier.response/success, :data :web, :meta nil}
+
+;; check which components are started
+(ctx/started-ids *ctx) 
+;; => [:db :cache :web]
+----
+
+*Warning!*  Cyclic dependency check between components is not implemented yet. 
+If stack overflow error occurs during the start of component then there is cyclic dependency. :)
+
+=== Minimal system example
+
+[source,clojure]
+----
+(let [system-map [
+                  {:id         :cfg                     ;; cfg component will prepare config for all context
+                   :config     {}
+                   :start-deps []
+                   :start-fn   (fn [config]
+                                 (println "reading config data from OS & JVM environment variables or config file")
+                                 {:db    {:host "localhost" :port 1234 :user "sa" :password "*****"}
+                                  :cache {:host "127.0.0.1" :user "cache-user" :pwd "***"}
+                                  :web   {:host "localhost" :port 8080 :root-context "/main"}})
+                   :stop-fn    (fn [obj-state])}
+
+                  {:id         :db
+                   :config     (fn [ctx] (-> (ctx/get-component-value ctx :cfg) :state-obj :db))
+                   :start-deps [:cfg]
+                   :start-fn   (fn [config] (println "starting db" :config config))
+                   :stop-fn    (fn [obj-state] (println "stopping db..."))}
+
+                  {:id         :cache
+                   :config     (fn [ctx] (-> (ctx/get-component-value ctx :cfg) :state-obj :cache))
+                   :start-deps [:cfg :db]
+                   :start-fn   (fn [config] (println "starting cache" :config config))
+                   :stop-fn    (fn [obj-state] (println "stopping cache..."))}
+
+                  {:id         :web
+                   :config     (fn [ctx] (-> (ctx/get-component-value ctx :cfg) :state-obj :web))
+                   :start-deps [:cfg :db :cache]
+                   :start-fn   (fn [config] (println "starting web" :config config))
+                   :stop-fn    (fn [obj-state] (println "stopping web..."))}
+
+                  {:id         :log
+                   :config     {:output "stdout"}
+                   :start-deps []
+                   :start-fn   (fn [config] (println "starting logging" :config config))
+                   :stop-fn    (fn [obj-state] (println "stopping logging..."))}
+                  ]
+      *ctx     (ctx/build-context system-map)]
+  (println "list of all registered components:" (ctx/list-all-ids *ctx))
+  (ctx/start-all *ctx)
+  (println  "list of all started components:"  (ctx/started-ids *ctx))
+  (ctx/stop-all *ctx))
+
+---
+list of all registered components: [:cfg :db :cache :web :log]
+reading config data from OS & JVM environment variables or config file
+starting db :config {:host localhost, :port 1234, :user sa, :password *****}
+starting cache :config {:host 127.0.0.1, :user cache-user, :pwd ***}
+starting web :config {:host localhost, :port 8080, :root-context /main}
+starting logging :config {:output stdout}
+list of all started components: [:cfg :db :cache :web :log]
+stopping web...
+stopping cache...
+stopping db...
+stopping logging...
+---
+;; => #unifier.response.UnifiedSuccess{:type :unifier.response/success, :data [:cfg :db :cache :web :log], :meta nil}
+----
+
+=== Component anatomy
+
+Complete structure of component:
+
+[source,clojure]
+----
+{:id :db,                 ;; component identifier
+ :config {},              ;; config is a map or fn with one arg - current whole context value
+ :start-deps [],          ;; dependencies which should be started before this component
+ :start-fn #object[fn],   ;; fn which starts this component with one argument (:config value)
+ :stop-fn #object[fn],    ;; fn which stops this component with one argument (stateful object)
+ :state-obj nil,          ;; stateful object (any value)
+ :status :started,        ;; component status 
+ :stop-deps [:cache]}     ;; dependencies which should be stopped before this component
+----
+
+==== CRUD-like functions
+
+There are some useful low-level API functions for managing component state:
+
+[source,clojure]
+----
+(def *ctx (atom {}))
+(ctx/create! *ctx {:id :db :config {} })
+(ctx/get-component *ctx :db) 
+(ctx/get-component-value @*ctx :db)
+(ctx/update! *ctx {:id :db :config {:a 1 :b 2} :start-deps []})  ;; update the whole value
+(ctx/set-config! *ctx :db {:a 42})            ;; modify :config value
+(ctx/delete! *ctx :db)                        ;; if status is :started then it cannot be deleted
+----
+
+==== Other functions
+
+[source,clojure]
+----
+(ctx/start-all *ctx) 
+(ctx/stop-all *ctx)
+(ctx/start-some *ctx [:db :cache])
+(ctx/stop-some *ctx [:db :cache])
+(ctx/started? *ctx :db)
+(ctx/stopped? *ctx :db)
+
+----
+
+== Building the project
+
+To build a project run `make <command>`.
 List of available commands:
 
-* clean         - clear target folder
-* javac         - compile java sources
-* compile       - compile clojure code
-* build         - build jar file (as library)
-* install       - install jar file (library) to local .m2
-* deploy        - deploy jar file (library) to clojars.org
-* conflicts     - show class conflicts (same name class in multiple jar files)
-* release       - release artifact. To release artifact run `clojure -A:pbuild release`.
-* bump          - bump version artifact in build file. E.g: `clojure -A:pbuilder bump beta`. Parameter should be
-one of: major, minor, patch, alpha, beta, rc, qualifier
+* clean - clear target folder
+* javac - compile java sources
+* compile - compile clojure code
+* build - build jar file (as library)
+* install - install jar file (library) to local .m2
+* deploy - deploy jar file (library) to clojars.org
+* conflicts - show class conflicts (same name class in multiple jar files)
+* release - release artifact.
+To release artifact run `clojure -A:pbuild release`.
+* bump - bump version artifact in build file. E.g: `clojure -A:pbuilder bump beta`.
+Parameter should be one of: major, minor, patch, alpha, beta, rc, qualifier
 
 == Tests
 
-To run tests use `clojure -A:test` or `make test`. Additional optional parameter may be :unit or :integration
-e.g. `clojure -A:test :unit` or `make test :integration`.
-
+To run tests use `clojure -A:test` or `make test`.
 
 == Deploy to repository
 
@@ -32,6 +306,6 @@ This command will sign jar before deploy, using your gpg key. (see pbuild.edn fo
 
 ## License
 
-Copyright © 2020 mike
+Copyright © 2020 Mikhail Ananev (@MikeAnanev)
 
 Distributed under the Eclipse Public License 2.0 or (at your option) any later version.

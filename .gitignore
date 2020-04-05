@@ -1,0 +1,37 @@
+# exclude whole folders
+log
+logs
+
+# exclude folders with exclusions
+.clj-kondo/*
+!*.clj-kondo/config.edn
+
+# exclude all .idea except some subfolders
+.idea/*
+!.idea/clojure-deps.xml
+!.idea/codeStyles/
+!.idea/copyright/
+
+
+# standard (default)
+/target
+/classes
+/checkouts
+*.jar
+*.class
+*.xml.asc
+/.cpcache
+/.lein-*
+/.nrepl-history
+/.nrepl-port
+.hgignore
+.hg/
+
+
+# files
+*.iml
+pom.xml
+trace.edn
+.eastwood
+.nrepl-port
+.env

@@ -19,10 +19,11 @@
                                           :kaocha.plugin/notifier
                                           :kaocha.plugin.alpha/info]
 
-     :tests                              [{:id           :unit
+     :tests                              [
+                                          {:id           :all
                                            :source-paths ["src"]
                                            ;; :test-paths   ["test/src"]
-                                           :focus-meta   [:unit]}
+                                           :focus-meta   []}
 
                                           ;;{:id         :integration
                                           ;; :source-paths ["src"]

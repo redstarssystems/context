@@ -11,7 +11,7 @@
  :target-folder               "target"
  :group-id                    "org.rssys"
  :artifact-id                 "context"
- :artifact-version            "0.1.0-alpha1-SNAPSHOT"
+ :artifact-version            "0.1.0-alpha1"
 
  :description                 "Context is a library designed to manage system state."
  :url                         "https://github.com/redstarssystems/context.git"

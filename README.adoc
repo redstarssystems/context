@@ -1,0 +1,37 @@
+== context
+
+Project context generated from library template https://github.com/redstarssystems/lib-template.git.
+
+== Building project
+
+Easiest way to build project is to use Makefile (make utility). Run `make help` for additional info.
+To build project using tools.deps run `clojure -A:pbuilder <command>`.
+List of available commands:
+
+* clean         - clear target folder
+* javac         - compile java sources
+* compile       - compile clojure code
+* build         - build jar file (as library)
+* install       - install jar file (library) to local .m2
+* deploy        - deploy jar file (library) to clojars.org
+* conflicts     - show class conflicts (same name class in multiple jar files)
+* release       - release artifact. To release artifact run `clojure -A:pbuild release`.
+* bump          - bump version artifact in build file. E.g: `clojure -A:pbuilder bump beta`. Parameter should be
+one of: major, minor, patch, alpha, beta, rc, qualifier
+
+== Tests
+
+To run tests use `clojure -A:test` or `make test`. Additional optional parameter may be :unit or :integration
+e.g. `clojure -A:test :unit` or `make test :integration`.
+
+
+== Deploy to repository
+
+Put your repository credentials to settings.xml (or set password prompt in pbuild.edn).
+This command will sign jar before deploy, using your gpg key. (see pbuild.edn for signing options)
+
+## License
+
+Copyright © 2020 mike
+
+Distributed under the Eclipse Public License 2.0 or (at your option) any later version.

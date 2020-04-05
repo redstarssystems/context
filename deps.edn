@@ -1,0 +1,29 @@
+{
+ :mvn/repos {"clojars" {:url "https://repo.clojars.org/"}
+             "central" {:url "https://repo1.maven.org/maven2/"}}
+
+ :paths     ["src" "resources" "target/classes"]
+
+ :deps      {org.clojure/clojure {:mvn/version "1.10.1"}}
+
+ :aliases   {
+             :repl     {:extra-deps  {nrepl                {:mvn/version "0.6.0"}
+                                      healthsamurai/matcho {:mvn/version "0.3.3"}
+                                      hashp                {:mvn/version "0.1.1"}}
+                        :extra-paths ["dev/src" "resources" "test"]
+                        :main-opts   ["--main" "nrepl.cmdline"]}
+
+             :pbuilder {:extra-deps  {org.rssys/pbuilder {:mvn/version "0.1.9"}}
+                        :extra-paths ["resources"]
+                        :jvm-opts    []
+                        :main-opts   ["--main" "org.rssys.pbuilder.core"]}
+
+             :test     {:extra-deps  {lambdaisland/kaocha           {:mvn/version "0.0-590"}
+                                      lambdaisland/kaocha-cloverage {:mvn/version "0.0-41"}
+                                      healthsamurai/matcho          {:mvn/version "0.3.3"}}
+                        :extra-paths ["resources" "test" "test/resources"]
+                        :jvm-opts    []
+                        :main-opts   ["--main" "kaocha.runner"]}
+
+             }
+ }

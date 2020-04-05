@@ -1,0 +1,22 @@
+{
+ ;;:java-source-paths "java-src"
+ ;;:javac-options     ["-target" "1.8" "-source" "1.8" "-Xlint:-options"]
+
+ :warn-on-resource-conflicts? true
+
+ :deploy-signed?              true
+ :deploy-repo                 {:id "clojars" :url "https://clojars.org/repo"}
+ :deploy-creds                :m2-settings                  ;; :m2-settings or :password-prompt
+
+ :target-folder               "target"
+ :group-id                    "org.rssys"
+ :artifact-id                 "context"
+ :artifact-version            "0.1.0-SNAPSHOT"
+
+ :description                 "FIXME: Put your library description here"
+ :url                         "FIXME: https://github.com/add-your-repo"
+ :scm                         {:url "FIXME: https://github.com/add-your-repo"}
+ :license                     {:name "EPL-2.0"
+                               :url  "https://www.eclipse.org/legal/epl-2.0/"}
+ ;;:manifest                    {"Multi-Release" "true"}    ;; here you may override MANIFEST.MF
+ }

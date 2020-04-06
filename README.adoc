@@ -170,8 +170,8 @@ on *:db* component, then it can be declared like this:
 ;; => [:db :cache :web]
 ----
 
-*Warning!*  Cyclic dependency check between components is not implemented yet. 
-If stack overflow error occurs during the start of component then there is cyclic dependency. :)
+*Warning!* The cyclic dependency check between components is not implemented yet. 
+If stack overflow error occurs during the start of component then there is a cyclic dependency. :)
 
 === Minimal system example
 

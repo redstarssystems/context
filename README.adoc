@@ -218,7 +218,7 @@ If stack overflow error occurs during the start of component then there is cycli
   (println  "list of all started components:"  (ctx/started-ids *ctx))
   (ctx/stop-all *ctx))
 
----
+
 list of all registered components: [:cfg :db :cache :web :log]
 reading config data from OS & JVM environment variables or config file
 starting db :config {:host localhost, :port 1234, :user sa, :password *****}
@@ -230,11 +230,11 @@ stopping web...
 stopping cache...
 stopping db...
 stopping logging...
----
+
 ;; => #unifier.response.UnifiedSuccess{:type :unifier.response/success, :data [:cfg :db :cache :web :log], :meta nil}
 ----
 
-=== Component anatomy
+=== Component's anatomy
 
 Complete structure of component:
 

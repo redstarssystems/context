@@ -161,7 +161,7 @@ on *:db* component, then it can be declared like this:
 (ctx/create! *ctx {:id :web :config {} :start-deps [:cache] :start-fn (fn [config]) :stop-fn (fn [obj-state])})
 ;; => #unifier.response.UnifiedSuccess{:type :unifier.response/created, :data :web, :meta nil}
 
-;; start of :web component cause start of :db an :cache components, respectively
+;; the start of the :web component causes the start of :db and :cache components, respectively.
 (ctx/start! *ctx :web)
 ;; #unifier.response.UnifiedSuccess{:type :unifier.response/success, :data :web, :meta nil}
 

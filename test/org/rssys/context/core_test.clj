@@ -279,7 +279,7 @@
         (match (sut/started-ids *ctx) [:db])
         (match (sut/stopped-ids *ctx) [:cache :web])
         (match (:data result) :web)
-        (match (:meta result) "can't start component")
+        (match (:meta result) "can't start the component")
         ))))
 
 (deftest start-all-stop-all-test

@@ -20,7 +20,7 @@
 
 
 (def ^:dynamic *components-path-vec*
-  "path in the system context where reside components (stateful objects)"
+  "A path in the system context where reside components (stateful objects)"
   [:context/components])
 
 (defn- dissoc-in
@@ -63,7 +63,7 @@
       (r/as-conflict (:id new-component) "component with such id is already exist"))))
 
 (defn update!
-  "Update component's state in the system context.
+  "Update a component's state in the system context.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -88,7 +88,7 @@
     (r/as-not-found id-kwd "no such id in the context")))
 
 (defn- set-stop-dep!
-  "Set dependency to be stopped in case of this component stop.
+  "Set dependency to be stopped in case of this component stops.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -129,7 +129,7 @@
     #(r/as-exception (:id state-obj) {:msg (ex-message %) :cause (ex-cause %)})))
 
 (defn start!
-  "Start component using given `id-kwd` and (optionally) the start/stop functions.
+  "Start a component using given `id-kwd` and (optionally) the start/stop functions.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -162,7 +162,7 @@
      (r/as-not-found id-kwd "no such id in the context"))))
 
 (defn stop!
-  "Stop component using given `id-kwd`.
+  "Stop the component using given `id-kwd`.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -190,7 +190,7 @@
   [^Atom *ctx] (into [] (keys (get-in @*ctx *components-path-vec*))))
 
 (defn started?
-  "Check if component is started."
+  "Check if the component is started."
   [^Atom *ctx ^Keyword id-kwd] (= :started (:status (get-component *ctx id-kwd))))
 
 ;;check if component is stopped.
@@ -209,7 +209,7 @@
   [^Atom *ctx] (filterv #(stopped? *ctx %) (list-all-ids *ctx)))
 
 (defn start-some
-  "Start some of registered components, which are not started yet.
+  "Start some of the registered components, which are not started yet.
    Params:
     * `component-list` - vector of keywords with component's id.
    Returns:
@@ -227,7 +227,7 @@
       (r/as-success result))))
 
 (defn stop-some
-  "Stop some of registered components, which are not stopped yet.
+  "Stop some of the registered components, which are not stopped yet.
    Params:
     * `component-list` - vector of keywords with component's id.
    Returns:

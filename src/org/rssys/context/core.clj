@@ -4,10 +4,10 @@
             [clojure.spec.alpha :as s])
   (:import (clojure.lang Keyword Atom IFn)))
 
-;; component specification
-(s/def ::id keyword?)                                       ;; component identifier
-(s/def ::config (s/or :map map? :fn ifn?))                  ;; config is a map or fn with one arg - current context value
-(s/def ::state-obj any?)                                    ;; stateful object
+;; component's specification
+(s/def ::id keyword?)                                       ;; component's identifier
+(s/def ::config (s/or :map map? :fn ifn?))                  ;; config is a map or fn with 1 arg - the current context value
+(s/def ::state-obj any?)                                    ;; a stateful object
 (s/def ::status #{:started :stopped})                       ;; status
 (s/def ::start-deps (s/coll-of keyword?))                   ;; dependencies which should be started before this component
 (s/def ::stop-deps (s/coll-of keyword?))                    ;; dependencies which should be stopped before this component
@@ -18,8 +18,10 @@
                      :req-un [::id ::config]
                      :opt-un [::state-obj ::status ::start-deps ::stop-deps ::start-fn ::stop-fn]))
 
-;; path in the system context where reside components (stateful objects)
-(def ^:dynamic *components-path-vec* [:context/components])
+
+(def ^:dynamic *components-path-vec*
+  "path in the system context where reside components (stateful objects)"
+  [:context/components])
 
 (defn- dissoc-in
   "Dissociates an entry from a nested associative structure returning a new
@@ -36,15 +38,15 @@
     (dissoc m k)))
 
 (defn get-component
-  "# return component state from system context using its id"
+  "Returns: `component state` from system context using its `id-kwd`."
   [^Atom *ctx ^Keyword id-kwd] (when (and *ctx id-kwd) (-> @*ctx (get-in (conj *components-path-vec* id-kwd)))))
 
 (defn get-component-value
-  "# return component value from system context value using its id"
+  "Returns: `component value` from system context value using its `id-kwd`"
   [ctx ^Keyword id-kwd] (when (and ctx id-kwd) (-> ctx (get-in (conj *components-path-vec* id-kwd)))))
 
 (defn create!
-  "# create new component in the system context.
+  "Create new component in the system context.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -61,7 +63,7 @@
       (r/as-conflict (:id new-component) "component with such id is already exist"))))
 
 (defn update!
-  "# update component's state in the system context.
+  "Update component's state in the system context.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -73,7 +75,7 @@
     (r/as-not-found (:id new-component-state) "no such id in the context")))
 
 (defn delete!
-  "# delete component from system context.
+  "Delete component from system context.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -86,7 +88,7 @@
     (r/as-not-found id-kwd "no such id in the context")))
 
 (defn- set-stop-dep!
-  "# set dependency to be stopped in case of this component stop.
+  "Set dependency to be stopped in case of this component stop.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -96,7 +98,7 @@
                     :stop-deps (into [] (into #{} (conj (:stop-deps state-obj) dep-to-be-stopped-kwd)))))))
 
 (defn set-config!
-  "# set new config for component.
+  "Set new config for a component.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -127,7 +129,7 @@
     #(r/as-exception (:id state-obj) {:msg (ex-message %) :cause (ex-cause %)})))
 
 (defn start!
-  "# start component using given id and (optionally) start/stop functions.
+  "Start component using given `id-kwd` and (optionally) the start/stop functions.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -160,7 +162,7 @@
      (r/as-not-found id-kwd "no such id in the context"))))
 
 (defn stop!
-  "# stop  component using given id.
+  "Stop component using given `id-kwd`.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -182,32 +184,32 @@
     (r/as-not-found id-kwd "no such id in the context")))
 
 (defn list-all-ids
-  "# get list of ids for all registered components.
+  "Get list of ids for all registered components.
    Returns:
     * vector of keywords."
   [^Atom *ctx] (into [] (keys (get-in @*ctx *components-path-vec*))))
 
 (defn started?
-  "# check if component is started."
+  "Check if component is started."
   [^Atom *ctx ^Keyword id-kwd] (= :started (:status (get-component *ctx id-kwd))))
 
 ;;check if component is stopped.
 (def stopped? (complement started?))
 
 (defn started-ids
-  "# get list of ids for all started components.
+  "Get list of ids for all started components.
    Returns:
     * vector of keywords."
   [^Atom *ctx] (filterv #(started? *ctx %) (list-all-ids *ctx)))
 
 (defn stopped-ids
-  "# get list of ids for all stopped components.
+  "Get list of ids for all stopped components.
    Returns:
     * vector of keywords."
   [^Atom *ctx] (filterv #(stopped? *ctx %) (list-all-ids *ctx)))
 
 (defn start-some
-  "# start some of registered components, which are not started yet.
+  "Start some of registered components, which are not started yet.
    Params:
     * `component-list` - vector of keywords with component's id.
    Returns:
@@ -216,7 +218,7 @@
   [^Atom *ctx component-list]
   (let [result (reduce (fn [acc i]
                          (if-not (r/success? (start! *ctx i))
-                           (reduced (r/as-error i "can't start component"))
+                           (reduced (r/as-error i "can't start the component"))
                            (conj acc i)))
                  []
                  component-list)]
@@ -225,7 +227,7 @@
       (r/as-success result))))
 
 (defn stop-some
-  "# stop some of registered components, which are not stopped yet.
+  "Stop some of registered components, which are not stopped yet.
    Params:
     * `component-list` - vector of keywords with component's id.
    Returns:
@@ -234,7 +236,7 @@
   [^Atom *ctx component-list]
   (let [result (reduce (fn [acc i]
                          (if-not (r/success? (stop! *ctx i))
-                           (reduced (r/as-error i "can't stop component"))
+                           (reduced (r/as-error i "can't stop the component"))
                            (conj acc i)))
                  []
                  component-list)]
@@ -243,7 +245,7 @@
       (r/as-success result))))
 
 (defn start-all
-  "# start all registered components, which are not started yet.
+  "Start all registered components, which are not started yet.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -251,7 +253,7 @@
   (start-some *ctx (stopped-ids *ctx)))
 
 (defn stop-all
-  "# stop all registered components, which are not stopped yet.
+  "Stop all registered components, which are not stopped yet.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -259,19 +261,19 @@
   (stop-some *ctx (started-ids *ctx)))
 
 (defn build-context
-  "# build system context using given component-list.
+  "Build a system context using given `component-list`.
    Params:
     * `component-list` - vector of ::component
    Returns:
-    * `atom`     - as system context if success.
-    * `exception - if component-list is invalid or other errors."
+    * `atom`      - as system context if success.
+    * `exception` - if component-list is invalid or other errors."
   [component-list]
   (let [config-spec (s/coll-of ::component)
         new-ctx     (atom {})]
     (if (s/valid? config-spec component-list)
       (if (apply distinct? (mapv :id component-list))
         (reduce (fn [acc i] (if (r/success? (create! acc i)) acc
-                                                             (throw (ex-info "can't create component" i))))
+                                                             (throw (ex-info "can't create the component" i))))
           new-ctx component-list)
         ((throw (ex-info "component-list contains duplicate :id" {:explain-data (mapv :id component-list)}))))
       (throw (ex-info "component-list is not valid" {:explain-data (s/explain config-spec component-list)})))))

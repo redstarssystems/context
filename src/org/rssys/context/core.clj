@@ -75,7 +75,7 @@
     (r/as-not-found (:id new-component-state) "no such id in the context")))
 
 (defn delete!
-  "Delete component from system context.
+  "Delete a component from the system context.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -84,7 +84,7 @@
     (if-not (= :started (:status state-obj))
       (do (swap! *ctx dissoc-in (conj *components-path-vec* id-kwd))
           (r/as-deleted id-kwd))
-      (r/as-busy id-kwd "stop component before delete"))
+      (r/as-busy id-kwd "stop the component before delete"))
     (r/as-not-found id-kwd "no such id in the context")))
 
 (defn- set-stop-dep!

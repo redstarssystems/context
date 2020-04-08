@@ -1,5 +1,20 @@
 == Changelog
 
-=== [0.1.0-alpha] - 2020-04-06
+=== [0.1.0-alpha2] - next release
+
+Added:
+
+* doc string to stopped? fn
+
+Fixed:
+
+* README.adoc (orthographic and grammatical)
+* tests: avoid text content dependence.
+
+Changed:
+
+* git branching. now use `git flow` model.
+
+=== [0.1.0-alpha1] - 2020-04-06
 
 * Init alpha release

@@ -193,8 +193,7 @@
   "Check if the component is started."
   [^Atom *ctx ^Keyword id-kwd] (= :started (:status (get-component *ctx id-kwd))))
 
-;;check if component is stopped.
-(def stopped? (complement started?))
+(def stopped? "Check if the component is stopped." (complement started?))
 
 (defn started-ids
   "Get list of ids for all started components.

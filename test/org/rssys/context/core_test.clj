@@ -170,7 +170,7 @@
         (match (:data result) :web)
         (match (:meta result) (complement string?))
         (match result2 r/success?)
-        (match (:meta result2) "already started"))))
+        (match (:meta result2) string?))))
 
   )
 
@@ -221,7 +221,7 @@
         (match (:data result) :web)
         (match (:meta result) (complement string?))
         (match result2 r/success?)
-        (match (:meta result2) "already stopped")))))
+        (match (:meta result2) string?)))))
 
 (deftest list-all-ids-test
 
@@ -279,7 +279,7 @@
         (match (sut/started-ids *ctx) [:db])
         (match (sut/stopped-ids *ctx) [:cache :web])
         (match (:data result) :web)
-        (match (:meta result) "can't start the component")
+        (match (:meta result) string?)
         ))))
 
 (deftest start-all-stop-all-test

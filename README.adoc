@@ -12,11 +12,11 @@ Context is a library designed to manage system state.
 *Context* is like a central database holding the current world.
 Every system component should be able to get any information about the system state from one place in a consistent manner.
 * State management should be as simple as possible, avoiding framework-style constraints for application code.
-Ideally, *context* should be a pure Clojure atom produced from declarative data structure on the fly.
-* State management should be flexible to allow build multi-tenant systems easily.
+Ideally, *context* should be a pure Clojure atom produced from a declarative data structure on the fly.
+* State management should be flexible to facilitate the building of multi-tenant systems.
 *Context* should not be hard linked to a specific namespace.
 Ideally, *context* is a parameter for any system component which performs some business logic.
-* System state should have declarative information structure which allows to read and understand the current state without any means.
+* System state should have declarative information structure which allows one to read and understand the current state without the need for special tools.
 What is the whole system config?
 What parameters were used to start a database?
 What is the current implementation of a cache component?
@@ -27,7 +27,7 @@ All of these questions should have the immediate answer from *context*.
 For a long time I used the https://github.com/tolitius/mount[*mount*] library and it is a very good solution for state management.
 But now, for my projects, I need to see the system state in one place.
 Other Clojure solutions force me to arrange my components in a specific manner (e.g. using defrecords and protocols).
-These framework-style constraints sometimes have limits in building flexible systems cause all parts of an application should follow the same pattern.
+These framework-style constraints sometimes hamper the building of flexible systems by requiring that all components of an application follow the same pattern.
 
 == Usage
 
@@ -48,8 +48,8 @@ Require necessary namespaces:
 
 === Minimal component
 
-Each stateful object like database connection, cache, etc in a system, is called a component.
-Minimal component is a map with two required parameters: :id (keyword), :config (map or function).
+Each stateful object, e.g., a database connection, a cache, etc., in a system is called a component.
+The minimal component is a map with two required parameters: :id (keyword) and :config (map or function).
 The minimal component can be registered in a system context but it cannot be started (it is not executable yet).
 
 [source,clojure]
@@ -62,9 +62,9 @@ The minimal component can be registered in a system context but it cannot be sta
 
 === The context
 
-The *context* is a pure Clojure atom contains a map of components `{:id-1 component-state1, ...}`.
-All components are placed under `:context/components` key.
-This key can be overridden using `\*components-path-vec*` variable.
+The *context* is a pure Clojure atom containing a map of components `{:id-1 component-state1, ...}`.
+All components are placed under the `:context/components` key.
+This key can be overridden using the `\*components-path-vec*` variable.
 
 [source,clojure]
 ----
@@ -74,7 +74,7 @@ This key can be overridden using `\*components-path-vec*` variable.
 ;; => {:web {:id :web, :config {}, :state-obj nil, :status :stopped, :start-deps []}}
 ----
 
-The *context* can be built in a step by step manner:
+The *context* can be built in a step-by-step manner:
 
 [source,clojure]
 ----
@@ -101,10 +101,10 @@ The *context* can be built in a step by step manner:
 
 === Response codes 
 
-*Context* is using https://github.com/just-sultanov/clj-unifier[Unified responses library]. Every successful operation 
-with a context has a type `unifier.response.UnifiedSuccess` and every failure has a type `unifier.response.UnifiedError`.
+*Context* uses the https://github.com/just-sultanov/clj-unifier[Unified responses library]. Every successful operation 
+with a context has type `unifier.response.UnifiedSuccess` and every failure has type `unifier.response.UnifiedError`.
 
-In this example an attempt to create duplicate component with existing id has failure code:
+In this example, an attempt to create a component with a pre-existing id returns a failure code:
 
 [source,clojure]
 ----
@@ -115,13 +115,13 @@ In this example an attempt to create duplicate component with existing id has fa
                                :meta "component with such id is already exist"}
 ----
 
-`r/success?` and `r/error?` functions from `Unified responses library` can be used to detect result of context operation.
+The `r/success?` and `r/error?` functions from the `Unified responses library` can be used to categorize the result of a context operation.
 
 === Start / stop the component
 
 To start the component it has to be executable. The executable component has defined
-start/stop functions. Start function has one argument (config value) which should return stateful object. Stop function 
-has one argument (stateful object) which should close connection, release resources and so on.
+start/stop functions. The start function (supplied via the `:start-fn` key) takes one argument (config value) and should return a stateful object. The stop function
+(under `:stop-fn`) takes one argument (a stateful object) and should close connections, release resources and so on.
 
 [source,clojure]
 ----
@@ -136,13 +136,13 @@ has one argument (stateful object) which should close connection, release resour
 ;; => #unifier.response.UnifiedSuccess{:type :unifier.response/success, :data :web, :meta nil}
 
 (ctx/stop! *ctx :web)
-;;=> #unifier.response.UnifiedSuccess{:type :unifier.response/success, :data :web, :meta nil}
+;; => #unifier.response.UnifiedSuccess{:type :unifier.response/success, :data :web, :meta nil}
 ----
 
 === Component dependency management
 
-*Context* library has primitive dependency management. Every component dependency should be declared in `:start-deps` 
-vector using other component id's (e.g :start-deps contains ids of components which should be started before this component). 
+*Context* library has primitive dependency management. Every component dependency should be declared in the `:start-deps` 
+vector using other component id's. That is, the `:start-deps` vector of component _C_ ontains the id's of the components that should be started before _C_.
 
 Example: If *:web* component depends on *:cache* component, and *:cache* component depends 
 on *:db* component, then it can be declared like this:
@@ -153,7 +153,7 @@ on *:db* component, then it can be declared like this:
 ;; => #'user/*ctx
 
 (ctx/create! *ctx {:id :db :config {} :start-deps [] :start-fn (fn [config]) :stop-fn (fn [obj-state])})
-;; #unifier.response.UnifiedSuccess{:type :unifier.response/created, :data :db, :meta nil}
+;; => #unifier.response.UnifiedSuccess{:type :unifier.response/created, :data :db, :meta nil}
 
 (ctx/create! *ctx {:id :cache :config {} :start-deps [:db] :start-fn (fn [config]) :stop-fn (fn [obj-state])})
 ;; => #unifier.response.UnifiedSuccess{:type :unifier.response/created, :data :cache, :meta nil}
@@ -163,7 +163,7 @@ on *:db* component, then it can be declared like this:
 
 ;; the start of the :web component causes the start of :db and :cache components, respectively.
 (ctx/start! *ctx :web)
-;; #unifier.response.UnifiedSuccess{:type :unifier.response/success, :data :web, :meta nil}
+;; => #unifier.response.UnifiedSuccess{:type :unifier.response/success, :data :web, :meta nil}
 
 ;; check which components are started
 (ctx/started-ids *ctx) 
@@ -171,7 +171,7 @@ on *:db* component, then it can be declared like this:
 ----
 
 *Warning!* The cyclic dependency check between components is not implemented yet. 
-If stack overflow error occurs during the start of component then there is a cyclic dependency. :)
+If stack overflow error occurs during the start of a component then there is a cyclic dependency. :)
 
 === Minimal system example
 

@@ -173,6 +173,27 @@
        (r/as-error id-kwd "start/stop functions are not defined for this component"))
      (r/as-not-found id-kwd "no such id in the context"))))
 
+(defn isolated-start!
+  "Isolated start a component ignoring all its dependencies, using given `id-kwd` and (optionally) the start/stop functions.
+  Preserving :stops-deps value from previous isolated stop or start.
+   Returns:
+    * `r/success-types` - if success.
+    * `r/error-types`   - if failure."
+  ([^Atom *ctx ^Keyword id-kwd]
+   (let [{:keys [start-fn stop-fn]} (get-component *ctx id-kwd)]
+     (start! *ctx id-kwd start-fn stop-fn)))
+  ([^Atom *ctx ^Keyword id-kwd ^IFn start-fn ^IFn stop-fn]
+   (if-let [state-obj (get-component *ctx id-kwd)]
+     (let [stop-deps (:stop-deps state-obj)]
+       (if (and (ifn? start-fn) (ifn? stop-fn))
+        (if (= :started (:status state-obj))
+          (r/as-success id-kwd "already started")
+          (do
+            (start-component! *ctx state-obj start-fn stop-fn)
+            (update! *ctx (assoc (get-component *ctx id-kwd) :stop-deps (or stop-deps [])))))
+        (r/as-error id-kwd "start/stop functions are not defined for this component")))
+     (r/as-not-found id-kwd "no such id in the context"))))
+
 (defn stop!
   "Stop the component and all its dependencies using given `id-kwd`.
    Returns:
@@ -193,6 +214,23 @@
             (r/as-error id-kwd {:msg "can't stop these dependencies" :deps not-stopped-deps})
             (stop-component! *ctx state-obj)))
         (stop-component! *ctx state-obj)))
+    (r/as-not-found id-kwd "no such id in the context")))
+
+(defn isolated-stop!
+  "Isolated stop the component ignoring all its dependencies using given `id-kwd`.
+  Preserving :stops-deps value from previous start.
+   Returns:
+    * `r/success-types` - if success.
+    * `r/error-types`   - if failure."
+  [^Atom *ctx ^Keyword id-kwd]
+  (if-let [state-obj (get-component *ctx id-kwd)]
+    (let [stop-deps (:stop-deps state-obj)]
+      (if (not= :started (:status state-obj))
+       (r/as-success id-kwd "already stopped")
+       (do
+         (stop-component! *ctx state-obj)
+         (update! *ctx (assoc (get-component *ctx id-kwd) :stop-deps (or stop-deps []))))
+       ))
     (r/as-not-found id-kwd "no such id in the context")))
 
 (defn list-all-ids

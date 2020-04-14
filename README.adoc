@@ -282,6 +282,8 @@ There are some useful low-level API functions for managing component state:
 (ctx/stop-some *ctx [:db :cache])
 (ctx/started? *ctx :db)
 (ctx/stopped? *ctx :db)
+(ctx/isolated-stop! *ctx :db)    ;; isolated stop the component ignoring all its dependencies
+(ctx/isolated-start! *ctx :db)   ;; isolated start the component ignoring all its dependencies
 
 ----
 

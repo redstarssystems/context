@@ -35,7 +35,7 @@ Add to :deps section of deps.edn the context dependency (see latest version abov
 
 [source,clojure]
 ----
-:deps { org.rssys/context {:mvn/version "0.1.0-alpha1"}}
+:deps { org.rssys/context {:mvn/version "0.1.0-alpha2"}}
 ----
 
 Require necessary namespaces:
@@ -141,7 +141,7 @@ start/stop functions. The start function (supplied via the `:start-fn` key) take
 
 === Component dependency management
 
-*Context* library has primitive dependency management. Every component dependency should be declared in the `:start-deps` 
+*Context* library has dependency management. Every component dependency should be declared in the `:start-deps` 
 vector using other component id's. That is, the `:start-deps` vector of component _C_ ontains the id's of the components that should be started before _C_.
 
 Example: If *:web* component depends on *:cache* component, and *:cache* component depends 
@@ -170,14 +170,18 @@ on *:db* component, then it can be declared like this:
 ;; => [:db :cache :web]
 ----
 
-*Warning!* The cyclic dependency check between components is not implemented yet. 
-If stack overflow error occurs during the start of a component then there is a cyclic dependency. :)
+The cyclic dependency check between components is implemented.
+To control behaviour of cyclic dependency check use flag *ignore-cyclic-deps?*. If flag is false (default) then 
+throw Exception if cyclic dependency is detected. If flag is true (you know what you are doing!), then 
+ignore cyclic dependency loop and force to start the components.
+
 
 === Minimal system example
 
 [source,clojure]
 ----
-(let [system-map [
+(let [*ctx (atom {})
+      system-map [
                   {:id         :cfg                     ;; cfg component will prepare config for all context
                    :config     {}
                    :start-deps []
@@ -200,32 +204,38 @@ If stack overflow error occurs during the start of a component then there is a c
                    :start-fn   (fn [config] (println "starting cache" :config config))
                    :stop-fn    (fn [obj-state] (println "stopping cache..."))}
 
-                  {:id         :web
-                   :config     (fn [ctx] (-> (ctx/get-component-value ctx :cfg) :state-obj :web))
-                   :start-deps [:cfg :db :cache]
-                   :start-fn   (fn [config] (println "starting web" :config config))
-                   :stop-fn    (fn [obj-state] (println "stopping web..."))}
-
                   {:id         :log
                    :config     {:output "stdout"}
                    :start-deps []
                    :start-fn   (fn [config] (println "starting logging" :config config))
                    :stop-fn    (fn [obj-state] (println "stopping logging..."))}
+
+                  {:id         :web
+                   :config     (fn [ctx] (-> (ctx/get-component-value ctx :cfg) :state-obj :web))
+                   :start-deps [:cfg :db :cache :log]
+                   :start-fn   (fn [config]
+                                 (println "starting web" :config config)
+                                 (println "pass the whole context as atom to web handler:" *ctx))
+                   :stop-fn    (fn [obj-state] (println "stopping web..."))}
                   ]
-      *ctx     (ctx/build-context system-map)]
+      ]
+  (ctx/build-context *ctx system-map)
   (println "list of all registered components:" (ctx/list-all-ids *ctx))
   (ctx/start-all *ctx)
+  (do
+    (println "do some business logic or control functions with context"))
   (println  "list of all started components:"  (ctx/started-ids *ctx))
   (ctx/stop-all *ctx))
 
-
-list of all registered components: [:cfg :db :cache :web :log]
+list of all registered components: [:cfg :db :cache :log :web]
 reading config data from OS & JVM environment variables or config file
 starting db :config {:host localhost, :port 1234, :user sa, :password *****}
 starting cache :config {:host 127.0.0.1, :user cache-user, :pwd ***}
-starting web :config {:host localhost, :port 8080, :root-context /main}
 starting logging :config {:output stdout}
-list of all started components: [:cfg :db :cache :web :log]
+starting web :config {:host localhost, :port 8080, :root-context /main}
+pass the whole context as atom to web handler: #object[clojure.lang.Atom 0x25f7aecb ...
+do some business logic or control functions with context
+list of all started components: [:cfg :db :cache :log :web]
 stopping web...
 stopping cache...
 stopping db...
@@ -275,6 +285,8 @@ There are some useful low-level API functions for managing component state:
 (ctx/stop-some *ctx [:db :cache])
 (ctx/started? *ctx :db)
 (ctx/stopped? *ctx :db)
+(ctx/isolated-stop! *ctx :db)    ;; isolated stop the component ignoring all its dependencies
+(ctx/isolated-start! *ctx :db)   ;; isolated start the component ignoring all its dependencies
 
 ----
 

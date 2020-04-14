@@ -55,8 +55,9 @@ The minimal component can be registered in a system context but it cannot be sta
 [source,clojure]
 ----
 ;; define context with a minimal component
-@(let [system [{:id :web :config {}}]]
-  (ctx/build-context system))
+@(let [*ctx (atom {})
+       system [{:id :web :config {}}]]
+   (ctx/build-context *ctx system))
 ;; => #:context{:components {:web {:id :web, :config {}, :state-obj nil, :status :stopped, :start-deps []}}}
 ----
 
@@ -69,9 +70,10 @@ This key can be overridden using the `\*components-path-vec*` variable.
 [source,clojure]
 ----
 (binding [ctx/*components-path-vec* []]
-  @(let [system [{:id :web :config {}}]]
-     (ctx/build-context system)))
-;; => {:web {:id :web, :config {}, :state-obj nil, :status :stopped, :start-deps []}}
+  @(let [*ctx (atom {})
+         system [{:id :web :config {}}]]
+     (ctx/build-context *ctx system)))
+;;=> {:web {:id :web, :config {}, :state-obj nil, :status :stopped, :start-deps []}}
 ----
 
 The *context* can be built in a step-by-step manner:

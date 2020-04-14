@@ -4,6 +4,7 @@
 
 Added:
 
+* flag *print-exceptions?* - print exception info to stdout during start/stop operations with components.
 * doc string to stopped? fn
 
 Fixed:
@@ -13,6 +14,7 @@ Fixed:
 
 Changed:
 
+* build-context now has two parameters. Now atom is passed as parameter and not created inside function.
 * git branching. now use `git flow` model.
 
 === [0.1.0-alpha1] - 2020-04-06

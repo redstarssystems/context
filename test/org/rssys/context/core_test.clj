@@ -2,7 +2,8 @@
   (:require [clojure.test :refer [deftest testing is]]
             [matcho.core :refer [match]]
             [org.rssys.context.core :as sut]
-            [unifier.response :as r])
+            [unifier.response :as r]
+            [clojure.spec.alpha :as s])
   (:import (clojure.lang Atom)))
 
 (deftest get-component-test
@@ -297,7 +298,8 @@
 
 (deftest build-context-test
   (testing "build system context from system map"
-    (let [system-map [
+    (let [*ctx       (atom {})
+          system-map [
                       {:id         :cfg                     ;; cfg component will prepare config for all context
                        :config     {}
                        :start-deps []
@@ -320,24 +322,27 @@
                        :start-fn   (fn [config] (println "starting cache" :config config))
                        :stop-fn    (fn [obj-state] (println "stopping cache..."))}
 
-                      {:id         :web
-                       :config     (fn [ctx] (-> (sut/get-component-value ctx :cfg) :state-obj :web))
-                       :start-deps [:cfg :db :cache]
-                       :start-fn   (fn [config] (println "starting web" :config config))
-                       :stop-fn    (fn [obj-state] (println "stopping web..."))}
-
                       {:id         :log
                        :config     {:output "stdout"}
                        :start-deps []
                        :start-fn   (fn [config] (println "starting logging" :config config))
                        :stop-fn    (fn [obj-state] (println "stopping logging..."))}
+
+                      {:id         :web
+                       :config     (fn [ctx] (-> (sut/get-component-value ctx :cfg) :state-obj :web))
+                       :start-deps [:cfg :db :cache :log]
+                       :start-fn   (fn [config]
+                                     (println "starting web" :config config)
+                                     (println "pass the whole context to web handler:" *ctx))
+                       :stop-fn    (fn [obj-state] (println "stopping web..."))}
                       ]
-          *ctx     (sut/build-context system-map)]
+          ]
+      (sut/build-context *ctx system-map)
       (is (instance? Atom *ctx))
-      (match (sut/list-all-ids *ctx) [:cfg :db :cache :web :log])
-      (match (sut/stopped-ids *ctx) [:cfg :db :cache :web :log])
+      (match (sut/list-all-ids *ctx) [:cfg :db :cache :log :web])
+      (match (sut/stopped-ids *ctx) [:cfg :db :cache :log :web])
       (sut/start-all *ctx)
-      (match (sut/started-ids *ctx) [:cfg :db :cache :web :log])
-      (match (-> (sut/get-component  *ctx :cache) :config) {:host "127.0.0.1" :user "cache-user" :pwd "***"})
-      (match (-> (sut/get-component  *ctx :log) :config) {:output "stdout"})
+      (match (sut/started-ids *ctx) [:cfg :db :cache :log :web])
+      (match (-> (sut/get-component *ctx :cache) :config) {:host "127.0.0.1" :user "cache-user" :pwd "***"})
+      (match (-> (sut/get-component *ctx :log) :config) {:output "stdout"})
       )))

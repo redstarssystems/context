@@ -23,6 +23,10 @@
   "A path in the system context where reside components (stateful objects)"
   [:context/components])
 
+(def ^:dynamic *print-exceptions?*
+  "Print exception info to stdout during start/stop operations with components."
+  true)
+
 (defn- dissoc-in
   "Dissociates an entry from a nested associative structure returning a new
   nested structure. keys is a sequence of keys. Any empty maps that result
@@ -118,7 +122,11 @@
                       :status :started
                       :start-fn start-fn
                       :stop-fn stop-fn)))
-    #(r/as-exception (:id state-obj) {:msg (ex-message %) :cause (ex-cause %)})))
+    (fn [ex]
+      (when *print-exceptions?*
+        (println (format "\nstart exception [%s]: %s,\n%s\ndetails: \n%s\n"
+                   (:id state-obj) (ex-message ex) (apply str (repeat 50 "-")) (ex-data ex))))
+      (r/as-exception (:id state-obj) {:msg (ex-message ex) :cause (ex-cause ex)}))))
 
 (defn- stop-component! [*ctx state-obj]
   (r/safe
@@ -126,10 +134,14 @@
                     :state-obj ((:stop-fn state-obj) (:state-obj state-obj))
                     :stop-deps []
                     :status :stopped))
-    #(r/as-exception (:id state-obj) {:msg (ex-message %) :cause (ex-cause %)})))
+    (fn [ex]
+      (when *print-exceptions?*
+        (println (format "\nstop exception [%s]: %s,\n%s\ndetails: \n%s\n"
+                   (:id state-obj) (ex-message ex) (apply str (repeat 50 "-")) (ex-data ex))))
+      (r/as-exception (:id state-obj) {:msg (ex-message ex) :cause (ex-cause ex)}))))
 
 (defn start!
-  "Start a component using given `id-kwd` and (optionally) the start/stop functions.
+  "Start a component and all its dependencies using given `id-kwd` and (optionally) the start/stop functions.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -162,7 +174,7 @@
      (r/as-not-found id-kwd "no such id in the context"))))
 
 (defn stop!
-  "Stop the component using given `id-kwd`.
+  "Stop the component and all its dependencies using given `id-kwd`.
    Returns:
     * `r/success-types` - if success.
     * `r/error-types`   - if failure."
@@ -262,17 +274,17 @@
 (defn build-context
   "Build a system context using given `component-list`.
    Params:
+    * `*new-ctx`       - atom with map (empty or not), where to put result.
     * `component-list` - vector of ::component
    Returns:
-    * `atom`      - as system context if success.
+    * `*new-ctx`  - modified atom as system context if success.
     * `exception` - if component-list is invalid or other errors."
-  [component-list]
-  (let [config-spec (s/coll-of ::component)
-        new-ctx     (atom {})]
+  [*new-ctx component-list]
+  (let [config-spec (s/coll-of ::component)]
     (if (s/valid? config-spec component-list)
       (if (apply distinct? (mapv :id component-list))
         (reduce (fn [acc i] (if (r/success? (create! acc i)) acc
                                                              (throw (ex-info "can't create the component" i))))
-          new-ctx component-list)
+          *new-ctx component-list)
         ((throw (ex-info "component-list contains duplicate :id" {:explain-data (mapv :id component-list)}))))
       (throw (ex-info "component-list is not valid" {:explain-data (s/explain config-spec component-list)})))))

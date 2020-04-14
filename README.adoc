@@ -177,7 +177,8 @@ If stack overflow error occurs during the start of a component then there is a c
 
 [source,clojure]
 ----
-(let [system-map [
+(let [*ctx (atom {})
+      system-map [
                   {:id         :cfg                     ;; cfg component will prepare config for all context
                    :config     {}
                    :start-deps []
@@ -200,32 +201,38 @@ If stack overflow error occurs during the start of a component then there is a c
                    :start-fn   (fn [config] (println "starting cache" :config config))
                    :stop-fn    (fn [obj-state] (println "stopping cache..."))}
 
-                  {:id         :web
-                   :config     (fn [ctx] (-> (ctx/get-component-value ctx :cfg) :state-obj :web))
-                   :start-deps [:cfg :db :cache]
-                   :start-fn   (fn [config] (println "starting web" :config config))
-                   :stop-fn    (fn [obj-state] (println "stopping web..."))}
-
                   {:id         :log
                    :config     {:output "stdout"}
                    :start-deps []
                    :start-fn   (fn [config] (println "starting logging" :config config))
                    :stop-fn    (fn [obj-state] (println "stopping logging..."))}
+
+                  {:id         :web
+                   :config     (fn [ctx] (-> (ctx/get-component-value ctx :cfg) :state-obj :web))
+                   :start-deps [:cfg :db :cache :log]
+                   :start-fn   (fn [config]
+                                 (println "starting web" :config config)
+                                 (println "pass the whole context as atom to web handler:" *ctx))
+                   :stop-fn    (fn [obj-state] (println "stopping web..."))}
                   ]
-      *ctx     (ctx/build-context system-map)]
+      ]
+  (ctx/build-context *ctx system-map)
   (println "list of all registered components:" (ctx/list-all-ids *ctx))
   (ctx/start-all *ctx)
+  (do
+    (println "do some business logic or control functions with context"))
   (println  "list of all started components:"  (ctx/started-ids *ctx))
   (ctx/stop-all *ctx))
 
-
-list of all registered components: [:cfg :db :cache :web :log]
+list of all registered components: [:cfg :db :cache :log :web]
 reading config data from OS & JVM environment variables or config file
 starting db :config {:host localhost, :port 1234, :user sa, :password *****}
 starting cache :config {:host 127.0.0.1, :user cache-user, :pwd ***}
-starting web :config {:host localhost, :port 8080, :root-context /main}
 starting logging :config {:output stdout}
-list of all started components: [:cfg :db :cache :web :log]
+starting web :config {:host localhost, :port 8080, :root-context /main}
+pass the whole context as atom to web handler: #object[clojure.lang.Atom 0x25f7aecb ...
+do some business logic or control functions with context
+list of all started components: [:cfg :db :cache :log :web]
 stopping web...
 stopping cache...
 stopping db...

@@ -27,6 +27,10 @@
   "Print exception info to stdout during start/stop operations with components."
   true)
 
+(def ^:dynamic *ignore-cyclic-deps?*
+  "If false then throw Exception if cyclic dependency is detected. If true, ignore cyclic dependency loop and force to start."
+  false)
+
 (defn- dissoc-in
   "Dissociates an entry from a nested associative structure returning a new
   nested structure. keys is a sequence of keys. Any empty maps that result
@@ -140,6 +144,8 @@
                    (:id state-obj) (ex-message ex) (apply str (repeat 50 "-")) (ex-data ex))))
       (r/as-exception (:id state-obj) {:msg (ex-message ex) :cause (ex-cause ex)}))))
 
+(declare isolated-start!)
+
 (defn start!
   "Start a component and all its dependencies using given `id-kwd` and (optionally) the start/stop functions.
    Returns:
@@ -148,7 +154,12 @@
   ([^Atom *ctx ^Keyword id-kwd]
    (let [{:keys [start-fn stop-fn]} (get-component *ctx id-kwd)]
      (start! *ctx id-kwd start-fn stop-fn)))
-  ([^Atom *ctx ^Keyword id-kwd ^IFn start-fn ^IFn stop-fn]
+  ([^Atom *ctx ^Keyword id-kwd dep-path-list]
+   (let [{:keys [start-fn stop-fn]} (get-component *ctx id-kwd)]
+     (start! *ctx id-kwd start-fn stop-fn dep-path-list)))
+  ([^Atom *ctx ^Keyword id-kwd ^IFn start-fn ^IFn stop-fn ]
+   (start! *ctx id-kwd start-fn stop-fn []))
+  ([^Atom *ctx ^Keyword id-kwd ^IFn start-fn ^IFn stop-fn dep-path-list]
    (if-let [state-obj (get-component *ctx id-kwd)]
      (if (and (ifn? start-fn) (ifn? stop-fn))
        (if (= :started (:status state-obj))
@@ -157,15 +168,19 @@
            (let [deps-states      (mapv #(get-component *ctx %) start-deps)
                  not-started-deps (filterv #(not= :started (:status %)) deps-states)]
              (if (seq not-started-deps)
-               (let [not-started-result (reduce (fn [acc i]
-                                                  (if-not (r/success? (start! *ctx (:id i)))
-                                                    (conj acc (:id i))
-                                                    (do (set-stop-dep! *ctx (:id i) (:id state-obj)) nil)))
-                                          []
-                                          not-started-deps)]
-                 (if (seq not-started-result)
-                   (r/as-error id-kwd {:msg "can't start these dependencies" :deps not-started-result})
-                   (start-component! *ctx state-obj start-fn stop-fn)))
+               (if (some #{id-kwd} dep-path-list)
+                 (if-not *ignore-cyclic-deps?*
+                   (throw (ex-info (str "detected cyclic dependency: " dep-path-list) {id-kwd dep-path-list}))
+                   (isolated-start! *ctx id-kwd start-fn stop-fn))
+                 (let [not-started-result (reduce (fn [acc i]
+                                                   (if-not (r/success? (start! *ctx (:id i) (conj dep-path-list id-kwd)))
+                                                     (conj acc (:id i))
+                                                     (do (set-stop-dep! *ctx (:id i) (:id state-obj)) nil)))
+                                           []
+                                           not-started-deps)]
+                  (if (seq not-started-result)
+                    (r/as-error id-kwd {:msg "can't start these dependencies" :deps not-started-result})
+                    (start-component! *ctx state-obj start-fn stop-fn))))
                (do
                  (run! #(set-stop-dep! *ctx % id-kwd) (mapv :id deps-states))
                  (start-component! *ctx state-obj start-fn stop-fn))))

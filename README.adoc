@@ -141,7 +141,7 @@ start/stop functions. The start function (supplied via the `:start-fn` key) take
 
 === Component dependency management
 
-*Context* library has primitive dependency management. Every component dependency should be declared in the `:start-deps` 
+*Context* library has dependency management. Every component dependency should be declared in the `:start-deps` 
 vector using other component id's. That is, the `:start-deps` vector of component _C_ ontains the id's of the components that should be started before _C_.
 
 Example: If *:web* component depends on *:cache* component, and *:cache* component depends 
@@ -170,8 +170,11 @@ on *:db* component, then it can be declared like this:
 ;; => [:db :cache :web]
 ----
 
-*Warning!* The cyclic dependency check between components is not implemented yet. 
-If stack overflow error occurs during the start of a component then there is a cyclic dependency. :)
+The cyclic dependency check between components is implemented.
+To control behaviour of cyclic dependency check use flag *ignore-cyclic-deps?*. If flag is false (default) then 
+throw Exception if cyclic dependency is detected. If flag is true (you know what you are doing!), then 
+ignore cyclic dependency loop and force to start the components.
+
 
 === Minimal system example
 

@@ -4,7 +4,9 @@
 
 Added:
 
-* flag *print-exceptions?* - print exception info to stdout during start/stop operations with components.
+* cyclic dependency detection between components.
+* flag *ignore-cyclic-deps?* to control cyclic dependency behaviour. 
+* flag *print-exceptions?* to print exception info to stdout during the start/stop operations with components.
 * doc string to stopped? fn
 
 Fixed:
@@ -14,8 +16,8 @@ Fixed:
 
 Changed:
 
-* build-context now has two parameters. Now atom is passed as parameter and not created inside function.
-* git branching. now use `git flow` model.
+* (BREAKING) build-context now has two parameters. Now atom is passed as a parameter and not created inside a function.
+* git branching. now `git flow` model is used.
 
 === [0.1.0-alpha1] - 2020-04-06
 

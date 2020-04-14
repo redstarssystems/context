@@ -4,7 +4,7 @@
             [org.rssys.context.core :as sut]
             [unifier.response :as r]
             [clojure.spec.alpha :as s])
-  (:import (clojure.lang Atom)))
+  (:import (clojure.lang Atom ExceptionInfo)))
 
 (deftest get-component-test
 
@@ -416,5 +416,62 @@
       (sut/stop-all *ctx) ;; check that after all we have normal stop
       (match (sut/stopped-ids *ctx) [:cfg :db :cache :log :web])
 
+      ))
+  )
+
+(deftest start!-stop!-cyclic-deps-test
+  (testing "cyclic dependency check"
+    (let [*ctx       (atom {})
+          system-map [
+                      {:id         :cfg                     ;; cfg component will prepare config for all context
+                       :config     {}
+                       :start-deps []
+                       :start-fn   (fn [config]
+                                     (println "reading config data from OS & JVM environment variables or config file")
+                                     {:db    {:host "localhost" :port 1234 :user "sa" :password "*****"}
+                                      :cache {:host "127.0.0.1" :user "cache-user" :pwd "***"}
+                                      :web   {:host "localhost" :port 8080 :root-context "/main"}})
+                       :stop-fn    (fn [obj-state])}
+
+                      {:id         :db
+                       :config     (fn [ctx] (-> (sut/get-component-value ctx :cfg) :state-obj :db))
+                       :start-deps [:cfg :log]
+                       :start-fn   (fn [config] (println "starting db" :config config) :db-state)
+                       :stop-fn    (fn [obj-state] (println "stopping db..."))}
+
+                      {:id         :cache
+                       :config     (fn [ctx] (-> (sut/get-component-value ctx :cfg) :state-obj :cache))
+                       :start-deps [:cfg :db]
+                       :start-fn   (fn [config] (println "starting cache" :config config) :cache-state)
+                       :stop-fn    (fn [obj-state] (println "stopping cache..."))}
+
+                      {:id         :log
+                       :config     {:output "stdout"}
+                       :start-deps [:db]
+                       :start-fn   (fn [config] (println "starting logging" :config config) :log-state)
+                       :stop-fn    (fn [obj-state] (println "stopping logging..."))}
+
+                      {:id         :web
+                       :config     (fn [ctx] (-> (sut/get-component-value ctx :cfg) :state-obj :web))
+                       :start-deps [:cfg :db :cache :log]
+                       :start-fn   (fn [config]
+                                     (println "starting web" :config config)
+                                     (println "pass the whole context to web handler:" *ctx))
+                       :stop-fn    (fn [obj-state] (println "stopping web..."))}
+                      ]
+          ]
+      (sut/build-context *ctx system-map)
+      (is (thrown? ExceptionInfo (sut/start-all *ctx)))
+
+      (binding [sut/*ignore-cyclic-deps?* true]
+        (match (sut/start-all *ctx) r/success?)
+        (match (sut/started-ids *ctx) [:cfg :db :cache :log :web])
+        (match (-> (sut/get-component *ctx :db) :state-obj) :db-state)
+        (match (-> (sut/get-component *ctx :cache) :state-obj) :cache-state)
+        (match (-> (sut/get-component *ctx :log) :state-obj) :log-state)
+        (match (sut/stop-all *ctx) r/success?)
+        (match (sut/stopped-ids *ctx) [:cfg :db :cache :log :web])
+        (match (sut/start-some *ctx [:cfg :db]) r/success?)
+        (match (sut/started-ids *ctx) [:cfg :db :log]))
       ))
   )

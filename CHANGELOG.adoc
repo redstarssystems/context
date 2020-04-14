@@ -1,12 +1,12 @@
 == Changelog
 
-=== [0.1.0-alpha2] - next release
+=== [0.1.0-alpha2] - 2020-04-14
 
 Added:
 
 * cyclic dependency detection between components.
-* flag *ignore-cyclic-deps?* to control cyclic dependency behaviour. 
-* flag *print-exceptions?* to print exception info to stdout during the start/stop operations with components.
+* flag \*ignore-cyclic-deps?* to control cyclic dependency behaviour. 
+* flag \*print-exceptions?* to print exception info to stdout during the start/stop operations with components.
 * doc string to stopped? fn
 
 Fixed:

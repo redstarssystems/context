@@ -171,9 +171,10 @@ on *:db* component, then it can be declared like this:
 ----
 
 The cyclic dependency check between components is implemented.
-To control behaviour of cyclic dependency check use flag *ignore-cyclic-deps?*. If flag is false (default) then 
-throw Exception if cyclic dependency is detected. If flag is true (you know what you are doing!), then 
-ignore cyclic dependency loop and force to start the components.
+To control the behavior of cyclic dependency check use flag \*ignore-cyclic-deps?*. 
+If the flag is false (default) then an Exception will be thrown if cyclic dependency is detected. If the flag is true 
+(you know what you are doing!), then the cyclic dependency loop will be ignored and context will be forced 
+to start the components.
 
 
 === Minimal system example

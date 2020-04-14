@@ -411,5 +411,10 @@
       (match (sut/started? *ctx :db) true)
       (match (sut/started? *ctx :cache) true)
       (match (sut/started? *ctx :web) true)
-      (match (:stop-deps (sut/get-component *ctx :db)) [:cache :web])))
+      (match (:stop-deps (sut/get-component *ctx :db)) [:cache :web])
+
+      (sut/stop-all *ctx) ;; check that after all we have normal stop
+      (match (sut/stopped-ids *ctx) [:cfg :db :cache :log :web])
+
+      ))
   )

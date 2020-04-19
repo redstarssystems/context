@@ -14,13 +14,13 @@
                         :extra-paths ["dev/src" "resources" "test"]
                         :main-opts   ["--main" "nrepl.cmdline"]}
 
-             :pbuilder {:extra-deps  {org.rssys/pbuilder {:mvn/version "0.1.9"}}
+             :pbuilder {:extra-deps  {org.rssys/pbuilder {:mvn/version "0.1.10"}}
                         :extra-paths ["resources"]
                         :jvm-opts    []
                         :main-opts   ["--main" "org.rssys.pbuilder.core"]}
 
-             :test     {:extra-deps  {lambdaisland/kaocha           {:mvn/version "0.0-590"}
-                                      lambdaisland/kaocha-cloverage {:mvn/version "0.0-41"}
+             :test     {:extra-deps  {lambdaisland/kaocha           {:mvn/version "1.0-612"}
+                                      lambdaisland/kaocha-cloverage {:mvn/version "1.0-45"}
                                       healthsamurai/matcho          {:mvn/version "0.3.3"}}
                         :extra-paths ["resources" "test" "test/resources"]
                         :jvm-opts    []

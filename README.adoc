@@ -1,6 +1,7 @@
 image:https://img.shields.io/clojars/v/org.rssys/context.svg[clojars,link=https://clojars.org/org.rssys/context]
+image:https://www.travis-ci.org/redstarssystems/context.svg?branch=develop["Build Status", link="https://www.travis-ci.org/redstarssystems/context"]
+image:https://codecov.io/gh/redstarssystems/context/branch/develop/graph/badge.svg[codecov,link=https://codecov.io/gh/redstarssystems/context]
 
-**Warning!** *It is an alpha release. Everything is subject to change.*
 
 == Intro
 
@@ -35,7 +36,7 @@ Add to :deps section of deps.edn the context dependency (see latest version abov
 
 [source,clojure]
 ----
-:deps { org.rssys/context {:mvn/version "0.1.0-alpha2"}}
+:deps { org.rssys/context {:mvn/version "0.1.0"}}
 ----
 
 Require necessary namespaces:
@@ -143,8 +144,9 @@ start/stop functions. The start function (supplied via the `:start-fn` key) take
 
 === Component dependency management
 
-*Context* library has dependency management. Every component dependency should be declared in the `:start-deps` 
-vector using other component id's. That is, the `:start-deps` vector of component _C_ ontains the id's of the components that should be started before _C_.
+*Context* library has dependency management. Every component dependency should be declared in the `:start-deps` collection:
+vector [] or set #{}, using other component id's. That is, the `:start-deps` collection of component _C_ contains the id's of 
+the components that should be started before _C_.
 
 Example: If *:web* component depends on *:cache* component, and *:cache* component depends 
 on *:db* component, then it can be declared like this:
@@ -255,12 +257,12 @@ Complete structure of component:
 ----
 {:id :db,                 ;; component identifier
  :config {},              ;; config is a map or fn with one arg - current whole context value
- :start-deps [],          ;; dependencies which should be started before this component
+ :start-deps [],          ;; dependencies which should be started before this component. Use set #{} or vector []..
  :start-fn #object[fn],   ;; fn which starts this component with one argument (:config value)
  :stop-fn #object[fn],    ;; fn which stops this component with one argument (stateful object)
  :state-obj nil,          ;; stateful object (any value)
  :status :started,        ;; component status 
- :stop-deps [:cache]}     ;; dependencies which should be stopped before this component
+ :stop-deps [:cache]}     ;; dependencies which should be stopped before this component (managed by context)
 ----
 
 ==== CRUD-like functions
@@ -308,7 +310,7 @@ List of available commands:
 * release - release artifact.
 To release artifact run `clojure -A:pbuild release`.
 * bump - bump version artifact in build file. E.g: `clojure -A:pbuilder bump beta`.
-Parameter should be one of: major, minor, patch, alpha, beta, rc, qualifier
+Parameter should be one of: major, minor, patch, alpha, beta, rc, qualifier, release.
 
 == Tests
 

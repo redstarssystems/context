@@ -1,5 +1,5 @@
 {
- ;;:java-source-paths "java-src"
+ ;;:java-src-folder "java-src"
  ;;:javac-options     ["-target" "1.8" "-source" "1.8" "-Xlint:-options"]
 
  :warn-on-resource-conflicts? true

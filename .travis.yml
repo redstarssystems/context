@@ -1,0 +1,28 @@
+language: java
+sudo: required
+jdk:
+  - openjdk13
+
+branches:
+  only:
+    - develop
+
+before_script:
+  - "curl -O https://download.clojure.org/install/linux-install-1.10.1.536.sh"
+  - "chmod +x linux-install-1.10.1.536.sh"
+  - "sudo ./linux-install-1.10.1.536.sh"
+  - "clojure -Sdescribe"
+
+cache:
+  directories:
+    - $HOME/.m2
+    - $HOME/.cljs
+    - node_modules
+    - .cpcache
+    - cljs-test-runner-out
+
+script:
+  - "make test"
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash) -f target/coverage/codecov.json

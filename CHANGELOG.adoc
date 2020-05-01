@@ -1,5 +1,12 @@
 == Changelog
 
+=== [0.1.1] - 2020-05-01
+
+Fixed:
+
+* if config is a function, then under some circumstances it is not evaluated during component start. this bug appears 
+only if context atom is passed as a parameter inside component during the start.
+
 === [0.1.0] - 2020-04-19
 
 Changed:

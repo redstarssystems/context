@@ -120,6 +120,7 @@
     (let [config (if (map? (:config state-obj))
                    (:config state-obj)
                    ((:config state-obj) @*ctx))]
+      (update! *ctx (assoc state-obj :config config))       ;; config should be evaluated at the start moment
       (update! *ctx (assoc state-obj
                       :config config
                       :state-obj (start-fn config)

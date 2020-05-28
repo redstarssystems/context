@@ -31,6 +31,10 @@ But now, for my projects, I need to see the system state in one place.
 Other Clojure solutions force me to arrange my components in a specific manner (e.g. using defrecords and protocols).
 These framework-style constraints sometimes hamper the building of flexible systems by requiring that all components of an application follow the same pattern.
 
+== Demo App
+
+See https://github.com/redstarssystems/context-demo[web app example]
+
 == Usage
 
 Add to :deps section of deps.edn the context dependency (see latest version above):

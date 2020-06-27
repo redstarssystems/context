@@ -35,7 +35,7 @@ These framework-style constraints sometimes hamper the building of flexible syst
 
 image::resources/context-idea.png[]
 
-Note, that system behaviour depends on context during I/O.
+Note, that system behaviour (I/O) depends only on context.
 There is no special places for state inside the System.
 
 == Demo App

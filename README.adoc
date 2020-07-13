@@ -33,7 +33,7 @@ These framework-style constraints sometimes hamper the building of flexible syst
 
 == Idea of the Context
 
-image::resources/context-idea.png[]
+image::context-idea.png[]
 
 Note, that system behaviour (I/O) depends only on context.
 There is no special places for state inside the System.

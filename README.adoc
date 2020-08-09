@@ -48,7 +48,7 @@ Add to :deps section of deps.edn the context dependency (see latest version abov
 
 [source,clojure]
 ----
-:deps { org.rssys/context {:mvn/version "0.1.1"}}
+:deps { org.rssys/context {:mvn/version "0.1.2"}}
 ----
 
 Require necessary namespaces:
@@ -306,6 +306,20 @@ There are some useful low-level API functions for managing component state:
 (ctx/isolated-start! *ctx :db)   ;; isolated start the component ignoring all its dependencies
 
 ----
+
+Also see helpers ns (org.rssys.context.helpers).
+
+[source,clojure]
+----
+(require '[org.rssys.context.helpers :as h])
+(h/config-value ctx :db)  ;; returns :config value of :db. It doesn't matter ctx is atom or value. 
+(h/state-value ctx :db)  ;; returns :state-obj value of db. It doesn't matter ctx is atom or value. 
+
+----
+
+`h/state-value` function is aware of clojure.lang.IDeref, so it is possible to use async value 
+(future, promise) returned from start-fn. This may be helpful when you want to perform asynchronous 
+connection to database and use it in another component.
 
 == Building the project
 

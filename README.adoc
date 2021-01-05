@@ -154,6 +154,8 @@ start/stop functions. The start function (supplied via the `:start-fn` key) take
 ;; => #unifier.response.UnifiedSuccess{:type :unifier.response/success, :data :web, :meta nil}
 ----
 
+After stop a component state is set to a value `EmptyState`.
+
 === Component dependency management
 
 *Context* library has dependency management. Every component dependency should be declared in the `:start-deps` collection:
@@ -191,6 +193,15 @@ To control the behavior of cyclic dependency check use flag \*ignore-cyclic-deps
 If the flag is false (default) then an Exception will be thrown if cyclic dependency is detected. If the flag is true 
 (you know what you are doing!), then the cyclic dependency loop will be ignored and context will be forced 
 to start the components.
+
+=== Feature toggling
+
+The system may have components with the status `:disabled`. During the system start any disabled components will be ignored
+(start/stop functions will not run). To disable a component just add to components' config map the
+key `:context/component-disabled` and `true` as a value (or function that prepares components' config should return map
+with key-value pair `{:context/component-disabled true}`.
+If the component has disabled dependencies, then it will be automatically disabled too during the system start.
+The key `:context/component-disabled` can be overridden by a dynamic var `*component-disabled*`.
 
 
 === Minimal system example

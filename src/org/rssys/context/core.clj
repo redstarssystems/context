@@ -8,7 +8,7 @@
 (s/def ::id keyword?)                                       ;; component's identifier
 (s/def ::config (s/or :map map? :fn ifn?))                  ;; config is a map or fn with 1 arg - the current context value
 (s/def ::state-obj any?)                                    ;; a stateful object
-(s/def ::status #{:started :stopped})                       ;; status
+(s/def ::status #{:started :stopped :disabled})             ;; status
 (s/def ::start-deps (s/coll-of keyword?))                   ;; dependencies which should be started before this component
 (s/def ::stop-deps (s/coll-of keyword?))                    ;; dependencies which should be stopped before this component
 (s/def ::start-fn ifn?)                                     ;; function which starts this component
@@ -18,6 +18,15 @@
                      :req-un [::id ::config]
                      :opt-un [::state-obj ::status ::start-deps ::stop-deps ::start-fn ::stop-fn]))
 
+(defrecord EmptyState [])                                   ;; default value for stopped components
+
+(def ^:dynamic *stopped-component-state*
+  "Special value, which indicates that state is empty or stopped."
+  EmptyState)
+
+(def ^:dynamic *component-disabled*
+  "Special config value, which prevents a component to start."
+  :context/component-disabled)
 
 (def ^:dynamic *components-path-vec*
   "A path in the system context where reside components (stateful objects)"
@@ -121,12 +130,22 @@
                    (:config state-obj)
                    ((:config state-obj) @*ctx))]
       (update! *ctx (assoc state-obj :config config))       ;; config should be evaluated at the start moment
-      (update! *ctx (assoc state-obj
-                      :config config
-                      :state-obj (start-fn config)
-                      :status :started
-                      :start-fn start-fn
-                      :stop-fn stop-fn)))
+      (cond
+
+        (= (get config *component-disabled*) true) (update! *ctx (assoc state-obj
+                                                                      :config config
+                                                                      :state-obj *stopped-component-state*
+                                                                      :status :disabled
+                                                                      :start-fn start-fn
+                                                                      :stop-fn stop-fn))
+
+
+        :else (update! *ctx (assoc state-obj
+                              :config config
+                              :state-obj (start-fn config)
+                              :status :started
+                              :start-fn start-fn
+                              :stop-fn stop-fn))))
     (fn [ex]
       (when *print-exceptions?*
         (println (format "\nstart exception [%s]: %s,\n%s\ndetails: \n%s\n"
@@ -135,10 +154,17 @@
 
 (defn- stop-component! [*ctx state-obj]
   (r/safe
-    (update! *ctx (assoc state-obj
-                    :state-obj ((:stop-fn state-obj) (:state-obj state-obj))
-                    :stop-deps []
-                    :status :stopped))
+    (cond
+      (= (:status state-obj) :disabled) (update! *ctx (assoc state-obj
+                                                        :state-obj *stopped-component-state*
+                                                        :stop-deps []
+                                                        :status :stopped))
+
+      :else (update! *ctx (assoc state-obj
+                            :state-obj (do ((:stop-fn state-obj) (:state-obj state-obj)) *stopped-component-state*)
+                            :stop-deps []
+                            :status :stopped)))
+
     (fn [ex]
       (when *print-exceptions?*
         (println (format "\nstop exception [%s]: %s,\n%s\ndetails: \n%s\n"
@@ -146,6 +172,8 @@
       (r/as-exception (:id state-obj) {:msg (ex-message ex) :cause (ex-cause ex)}))))
 
 (declare isolated-start!)
+
+
 
 (defn start!
   "Start a component and all its dependencies using given `id-kwd` and (optionally) the start/stop functions.
@@ -158,7 +186,7 @@
   ([^Atom *ctx ^Keyword id-kwd dep-path-list]
    (let [{:keys [start-fn stop-fn]} (get-component *ctx id-kwd)]
      (start! *ctx id-kwd start-fn stop-fn dep-path-list)))
-  ([^Atom *ctx ^Keyword id-kwd ^IFn start-fn ^IFn stop-fn ]
+  ([^Atom *ctx ^Keyword id-kwd ^IFn start-fn ^IFn stop-fn]
    (start! *ctx id-kwd start-fn stop-fn []))
   ([^Atom *ctx ^Keyword id-kwd ^IFn start-fn ^IFn stop-fn dep-path-list]
    (if-let [state-obj (get-component *ctx id-kwd)]
@@ -174,14 +202,18 @@
                    (throw (ex-info (str "detected cyclic dependency: " dep-path-list) {id-kwd dep-path-list}))
                    (isolated-start! *ctx id-kwd start-fn stop-fn))
                  (let [not-started-result (reduce (fn [acc i]
-                                                   (if-not (r/success? (start! *ctx (:id i) (conj dep-path-list id-kwd)))
-                                                     (conj acc (:id i))
-                                                     (do (set-stop-dep! *ctx (:id i) (:id state-obj)) nil)))
-                                           []
-                                           not-started-deps)]
-                  (if (seq not-started-result)
-                    (r/as-error id-kwd {:msg "can't start these dependencies" :deps not-started-result})
-                    (start-component! *ctx state-obj start-fn stop-fn))))
+                                                    (if-not (r/success? (start! *ctx (:id i) (conj dep-path-list id-kwd)))
+                                                      (conj acc (:id i))
+                                                      (do (set-stop-dep! *ctx (:id i) (:id state-obj)) nil)))
+                                            []
+                                            not-started-deps)]
+                   (if (seq not-started-result)
+                     (r/as-error id-kwd {:msg "can't start these dependencies" :deps not-started-result})
+                     (let [deps-states'      (mapv #(get-component *ctx %)  (:start-deps state-obj))
+                           disabled-deps (mapv :id (filterv #(= :disabled (:status %)) deps-states'))]
+                       (if (seq disabled-deps)
+                         (start-component! *ctx (assoc state-obj :config {*component-disabled* true :disabled-deps disabled-deps}) start-fn stop-fn) ;;inject disabled configuration due to disabled deps
+                         (start-component! *ctx state-obj start-fn stop-fn))))))
                (do
                  (run! #(set-stop-dep! *ctx % id-kwd) (mapv :id deps-states))
                  (start-component! *ctx state-obj start-fn stop-fn))))
@@ -202,12 +234,12 @@
    (if-let [state-obj (get-component *ctx id-kwd)]
      (let [stop-deps (:stop-deps state-obj)]
        (if (and (ifn? start-fn) (ifn? stop-fn))
-        (if (= :started (:status state-obj))
-          (r/as-success id-kwd "already started")
-          (do
-            (start-component! *ctx state-obj start-fn stop-fn)
-            (update! *ctx (assoc (get-component *ctx id-kwd) :stop-deps (or stop-deps [])))))
-        (r/as-error id-kwd "start/stop functions are not defined for this component")))
+         (if (= :started (:status state-obj))
+           (r/as-success id-kwd "already started")
+           (do
+             (start-component! *ctx state-obj start-fn stop-fn)
+             (update! *ctx (assoc (get-component *ctx id-kwd) :stop-deps (or stop-deps [])))))
+         (r/as-error id-kwd "start/stop functions are not defined for this component")))
      (r/as-not-found id-kwd "no such id in the context"))))
 
 (defn stop!
@@ -242,11 +274,11 @@
   (if-let [state-obj (get-component *ctx id-kwd)]
     (let [stop-deps (:stop-deps state-obj)]
       (if (not= :started (:status state-obj))
-       (r/as-success id-kwd "already stopped")
-       (do
-         (stop-component! *ctx state-obj)
-         (update! *ctx (assoc (get-component *ctx id-kwd) :stop-deps (or stop-deps []))))
-       ))
+        (r/as-success id-kwd "already stopped")
+        (do
+          (stop-component! *ctx state-obj)
+          (update! *ctx (assoc (get-component *ctx id-kwd) :stop-deps (or stop-deps []))))
+        ))
     (r/as-not-found id-kwd "no such id in the context")))
 
 (defn list-all-ids
@@ -260,6 +292,16 @@
   [^Atom *ctx ^Keyword id-kwd] (= :started (:status (get-component *ctx id-kwd))))
 
 (def stopped? "Check if the component is stopped." (complement started?))
+
+(defn disabled?
+  "Check if the component is disabled."
+  [^Atom *ctx ^Keyword id-kwd] (= :disabled (:status (get-component *ctx id-kwd))))
+
+(defn disabled-ids
+  "Get list of ids for all disabled components.
+   Returns:
+    * vector of keywords."
+  [^Atom *ctx] (filterv #(disabled? *ctx %) (list-all-ids *ctx)))
 
 (defn started-ids
   "Get list of ids for all started components.

@@ -4,17 +4,17 @@
 
  :paths     ["src" "resources" "target/classes"]
 
- :deps      {org.clojure/clojure {:mvn/version "1.10.2-alpha1"}
-             clj-unifier         {:mvn/version "0.0.14"}}
+ :deps      {org.clojure/clojure     {:mvn/version "1.10.2-rc1"}
+             clj-unifier/clj-unifier {:mvn/version "0.0.14"}}
 
  :aliases   {
-             :repl     {:extra-deps  {nrepl                {:mvn/version "0.6.0"}
+             :repl     {:extra-deps  {nrepl/nrepl          {:mvn/version "0.6.0"}
                                       healthsamurai/matcho {:mvn/version "0.3.3"}
-                                      hashp                {:mvn/version "0.1.1"}}
+                                      hashp/hashp          {:mvn/version "0.1.1"}}
                         :extra-paths ["dev/src" "resources" "test"]
                         :main-opts   ["--main" "nrepl.cmdline"]}
 
-             :pbuilder {:extra-deps  {org.rssys/pbuilder {:mvn/version "0.1.10"}}
+             :pbuilder {:extra-deps  {org.rssys/pbuilder {:mvn/version "0.1.2"}}
                         :extra-paths ["resources"]
                         :jvm-opts    []
                         :main-opts   ["--main" "org.rssys.pbuilder.core"]}

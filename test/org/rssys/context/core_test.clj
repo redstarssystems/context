@@ -4,7 +4,8 @@
             [org.rssys.context.core :as sut]
             [unifier.response :as r]
             [clojure.spec.alpha :as s])
-  (:import (clojure.lang Atom ExceptionInfo)))
+  (:import (clojure.lang Atom ExceptionInfo)
+           (org.rssys.context.core EmptyState)))
 
 (deftest get-component-test
 
@@ -173,6 +174,29 @@
         (match result2 r/success?)
         (match (:meta result2) string?))))
 
+  (let [*ctx (atom {})]
+    (testing "do not start component if it is disabled in config"
+      (sut/create! *ctx {:id :web :config {sut/*component-disabled* true} :start-fn (fn [config]) :stop-fn (fn [obj-state])})
+      (let [result (sut/start! *ctx :web)]
+        (match result r/success?)
+        (match (:data result) :web)
+        (match (:status (-> @*ctx (get-in (conj sut/*components-path-vec* :web)))) :disabled))))
+
+  (let [*ctx (atom {})]
+    (testing "do not start component if it has disabled dependencies"
+      (sut/create! *ctx {:id :db :config {} :start-fn (fn [config]) :stop-fn (fn [obj-state])})
+      (sut/create! *ctx {:id :cache :config {sut/*component-disabled* true}  :start-fn (fn [config]) :stop-fn (fn [obj-state]) })
+      (sut/create! *ctx {:id :queue :config {} :start-deps [:cache] :start-fn (fn [config]) :stop-fn (fn [obj-state]) })
+      (sut/create! *ctx {:id :web :config {} :start-deps [:db :queue] :start-fn (fn [config]) :stop-fn (fn [obj-state])})
+
+      (let [result-web (sut/start! *ctx :web)]
+        (match result-web r/success?)
+        (match (:status (-> @*ctx (get-in (conj sut/*components-path-vec* :web)))) :disabled) ;; manual check
+        (match (:config (-> @*ctx (get-in (conj sut/*components-path-vec* :web)))) {:disabled-deps [:queue] :context/component-disabled true}) ;; manual check
+        (match (:status (-> @*ctx (get-in (conj sut/*components-path-vec* :queue)))) :disabled) ;; manual check
+        (match (:status (-> @*ctx (get-in (conj sut/*components-path-vec* :cache)))) :disabled) ;; manual check
+        (match (:status (-> @*ctx (get-in (conj sut/*components-path-vec* :db)))) :started))))
+
   )
 
 (deftest stop!-test
@@ -185,7 +209,7 @@
       (let [result-web (sut/stop! *ctx :web)]
         (match result-web r/success?)
         (match (:status (-> @*ctx (get-in (conj sut/*components-path-vec* :web)))) :stopped) ;; manual check
-        (match (:state-obj (-> @*ctx (get-in (conj sut/*components-path-vec* :web)))) {:a 42}) ;; manual check
+        (match (:state-obj (-> @*ctx (get-in (conj sut/*components-path-vec* :web)))) EmptyState) ;; manual check
         (match (:data result-web) :web))))
 
   (let [*ctx (atom {})]
@@ -474,4 +498,17 @@
         (match (sut/start-some *ctx [:cfg :db]) r/success?)
         (match (sut/started-ids *ctx) [:cfg :db :log]))
       ))
+  )
+
+(deftest disabled-ids-test
+
+  (let [*ctx (atom {})]
+    (testing "check list of disabled components"
+      (sut/create! *ctx {:id :db :config {} :start-fn (fn [config]) :stop-fn (fn [obj-state])})
+      (sut/create! *ctx {:id :cache :config {sut/*component-disabled* true} :start-deps [] :start-fn (fn [config]) :stop-fn (fn [obj-state])})
+      (sut/create! *ctx {:id :web :config {} :start-deps [:db :cache] :start-fn (fn [config]) :stop-fn (fn [obj-state])})
+      (sut/start! *ctx :db)
+      (sut/start! *ctx :web)
+      (match (sut/started-ids *ctx) [:db])
+      (match (sut/disabled-ids *ctx) [:cache :web])))
   )

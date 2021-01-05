@@ -48,7 +48,7 @@ Add to :deps section of deps.edn the context dependency (see latest version abov
 
 [source,clojure]
 ----
-:deps { org.rssys/context {:mvn/version "0.1.2"}}
+:deps { org.rssys/context {:mvn/version "0.1.3"}}
 ----
 
 Require necessary namespaces:

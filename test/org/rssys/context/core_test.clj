@@ -197,6 +197,23 @@
         (match (:status (-> @*ctx (get-in (conj sut/*components-path-vec* :cache)))) :disabled) ;; manual check
         (match (:status (-> @*ctx (get-in (conj sut/*components-path-vec* :db)))) :started))))
 
+
+  (binding [sut/*component-disabled* :disabled?]
+    (let [*ctx (atom {})]
+     (testing "overriding sut/*component-disabled* key"
+       (sut/create! *ctx {:id :db :config {} :start-fn (fn [config]) :stop-fn (fn [obj-state])})
+       (sut/create! *ctx {:id :cache :config {:disabled? true} :start-fn (fn [config]) :stop-fn (fn [obj-state])})
+       (sut/create! *ctx {:id :queue :config {} :start-deps [:cache] :start-fn (fn [config]) :stop-fn (fn [obj-state])})
+       (sut/create! *ctx {:id :web :config {} :start-deps [:db :queue] :start-fn (fn [config]) :stop-fn (fn [obj-state])})
+
+       (let [result-web (sut/start! *ctx :web)]
+         (match result-web r/success?)
+         (match (:status (-> @*ctx (get-in (conj sut/*components-path-vec* :web)))) :disabled) ;; manual check
+         (match (:config (-> @*ctx (get-in (conj sut/*components-path-vec* :web)))) {:disabled-deps [:queue] :disabled? true}) ;; manual check
+         (match (:status (-> @*ctx (get-in (conj sut/*components-path-vec* :queue)))) :disabled) ;; manual check
+         (match (:status (-> @*ctx (get-in (conj sut/*components-path-vec* :cache)))) :disabled) ;; manual check
+         (match (:status (-> @*ctx (get-in (conj sut/*components-path-vec* :db)))) :started)))))
+
   )
 
 (deftest stop!-test

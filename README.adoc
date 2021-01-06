@@ -201,7 +201,7 @@ The system may have components with the status `:disabled`. During the system st
 key `:context/component-disabled` and `true` as a value (or function that prepares components' config should return map
 with key-value pair `{:context/component-disabled true}`.
 If the component has disabled dependencies, then it will be automatically disabled too during the system start.
-The key `:context/component-disabled` can be overridden by a dynamic var `*component-disabled*`.
+The key `:context/component-disabled` can be overridden by a dynamic var `\*component-disabled*`.
 
 
 === Minimal system example

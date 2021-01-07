@@ -328,8 +328,8 @@ Also see helpers ns (org.rssys.context.helpers).
 ----
 (require '[org.rssys.context.helpers :as h])
 (h/config-value ctx :db)  ;; returns :config value of :db. It doesn't matter ctx is atom or value. 
-(h/state-value ctx :db)  ;; returns :state-obj value of db. It doesn't matter ctx is atom or value. 
-(h/build-state-map ctx)  ;;  returns `{:component-id current-component-state}` map
+(h/state-value ctx :db)   ;; returns :state-obj value of db. It doesn't matter ctx is atom or value. 
+(h/build-state-map *ctx)  ;; returns `{:component-id current-component-state}` map using given Atom *ctx
 ----
 
 `h/state-value` function is aware of clojure.lang.IDeref, so it is possible to use async value 

@@ -70,7 +70,7 @@
   [^Atom *ctx new-component]
   {:pre [(s/valid? ::component new-component)]}
   (let [new-component (assoc new-component
-                        :state-obj nil
+                        :state-obj *stopped-component-state*
                         :status :stopped
                         :start-deps (or (:start-deps new-component) []))]
     (if (nil? (get-component *ctx (:id new-component)))

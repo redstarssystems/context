@@ -48,7 +48,7 @@ Add to :deps section of deps.edn the context dependency (see latest version abov
 
 [source,clojure]
 ----
-:deps { org.rssys/context {:mvn/version "0.1.3"}}
+:deps { org.rssys/context {:mvn/version "0.1.4"}}
 ----
 
 Require necessary namespaces:
@@ -283,7 +283,7 @@ Complete structure of component:
  :start-deps [],          ;; dependencies which should be started before this component. Use set #{} or vector []..
  :start-fn #object[fn],   ;; fn which starts this component with one argument (:config value)
  :stop-fn #object[fn],    ;; fn which stops this component with one argument (stateful object)
- :state-obj nil,          ;; stateful object (any value)
+ :state-obj nil,          ;; stateful object (any value) or EmptyState if component is not run
  :status :started,        ;; component status 
  :stop-deps [:cache]}     ;; dependencies which should be stopped before this component (managed by context)
 ----
@@ -329,12 +329,14 @@ Also see helpers ns (org.rssys.context.helpers).
 (require '[org.rssys.context.helpers :as h])
 (h/config-value ctx :db)  ;; returns :config value of :db. It doesn't matter ctx is atom or value. 
 (h/state-value ctx :db)  ;; returns :state-obj value of db. It doesn't matter ctx is atom or value. 
-
+(h/build-state-map ctx)  ;;  returns `{:component-id current-component-state}` map
 ----
 
 `h/state-value` function is aware of clojure.lang.IDeref, so it is possible to use async value 
 (future, promise) returned from start-fn. This may be helpful when you want to perform asynchronous 
 connection to database and use it in another component.
+
+`h/build-state-map` function is very useful in Ring handlers.
 
 == Building the project
 

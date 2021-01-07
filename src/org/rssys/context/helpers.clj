@@ -28,5 +28,10 @@
       result)))
 
 
+(defn build-state-map
+  "Returns map where key is a component id and a value is current component state."
+  [*ctx]
+  (let [ids (core/list-all-ids *ctx)]
+    (reduce (fn [acc k] (assoc acc k (state-value *ctx k))) {} ids)))
 
 
